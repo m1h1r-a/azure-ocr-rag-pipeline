@@ -7,21 +7,8 @@ import azure.functions as func
 from database import DatabaseConnection, DatabaseOperations
 from processors import DataValidator, DocumentIntelligenceProcessor, OpenAIExtractor
 
-# Set up logging (same as original)
-log_directory = "logs"
-os.makedirs(log_directory, exist_ok=True)
-log_file_path = os.path.join(log_directory, "pdf_processor.log")
-
-file_handler = logging.FileHandler(log_file_path)
-file_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
-
-# Get the root logger and add the file handler
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(file_handler)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = func.FunctionApp()
 
@@ -73,4 +60,3 @@ def ProcessPdfBlob(myblob: func.InputStream):
         logging.error(f"❌ Error in PDF processing pipeline: {str(e)}")
         logging.error(f"Error type: {type(e).__name__}")
         raise e
-

@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Optional, Tuple
 
@@ -10,10 +11,10 @@ class DatabaseConnection:
 
     def __init__(self):
         """Initialize connection parameters - same as original"""
-        self.server = "pdf-sql-server-0001.database.windows.net"
-        self.database = "pdf-data-db"
-        self.username = "CloudSAdccf3bad"
-        self.password = "Azure@3627"
+        self.server = os.environ.get("SQL_SERVER_NAME")
+        self.database = os.environ.get("SQL_DATABASE_NAME")
+        self.username = os.environ.get("SQL_USERNAME")
+        self.password = os.environ.get("SQL_PASSWORD")
         self.logger = logging.getLogger(__name__)
 
     def connect_with_retry(
