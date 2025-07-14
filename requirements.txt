@@ -1,0 +1,11 @@
+# Container requirements - simplified
+flask
+
+# Azure services (same as your working versions)
+azure-storage-blob
+azure-identity
+azure-ai-formrecognizer
+
+# AI and database (same as your working versions)
+openai
+pymssql
