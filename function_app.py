@@ -7,6 +7,7 @@ import azure.functions as func
 from database import DatabaseConnection, DatabaseOperations
 from processors import DataValidator, DocumentIntelligenceProcessor, OpenAIExtractor
 
+# Configure logging properly for Azure Functions
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -14,15 +15,17 @@ app = func.FunctionApp()
 
 
 @app.blob_trigger(
-    arg_name="myblob", path="pdfs/{name}", connection="pdfstorage0001_STORAGE"
+    arg_name="myblob",
+    path="pdfs/{name}",
+    connection="pdfstorageci0001_STORAGE",
 )
 def ProcessPdfBlob(myblob: func.InputStream):
-    logging.info(f"Python blob trigger function processed blob")
-    logging.info(f"Name: {myblob.name}")
-    logging.info(f"Blob Size: {myblob.length} bytes")
+    logger.info(f"Python blob trigger function processed blob")
+    logger.info(f"Name: {myblob.name}")
+    logger.info(f"Blob Size: {myblob.length} bytes")
 
     try:
-        # Extract filename from blob path (same as original)
+        # Extract filename from blob path
         filename = myblob.name.split("/")[-1]  # Gets filename from 'pdfs/filename.pdf'
 
         # === STEP 1: Document Intelligence - Extract Text ===
@@ -53,10 +56,10 @@ def ProcessPdfBlob(myblob: func.InputStream):
                     # Always close connection
                     db_operations.close_connection()
         except Exception as db_error:
-            logging.error(f"❌ Database operation failed: {str(db_error)}")
-            logging.error(f"Error type: {type(db_error).__name__}")
+            logger.error(f"❌ Database operation failed: {str(db_error)}")
+            logger.error(f"Error type: {type(db_error).__name__}")
 
     except Exception as e:
-        logging.error(f"❌ Error in PDF processing pipeline: {str(e)}")
-        logging.error(f"Error type: {type(e).__name__}")
+        logger.error(f"❌ Error in PDF processing pipeline: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
         raise e

@@ -20,7 +20,9 @@ class OpenAIExtractor:
             )
 
         self.client = AzureOpenAI(
-            azure_endpoint=self.endpoint, api_key=self.key, api_version="2024-02-01"
+            azure_endpoint=self.endpoint,
+            api_key=self.key,
+            api_version="2025-01-01-preview",
         )
 
         self.logger = logging.getLogger(__name__)
