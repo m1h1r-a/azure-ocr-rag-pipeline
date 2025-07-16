@@ -27,7 +27,40 @@ class OpenAIExtractor:
 
         self.logger = logging.getLogger(__name__)
 
-        # Healthcare extraction prompt template
+        self.intent_detection_template = """
+        You are a query intent detection specialist. Extract the intent from the following query and return it as a JSON object.
+
+        Instructions To Detect Intent:
+        1. Extract the most likely intent
+        2. Intent will be of the following categories, return only the category name:
+           a) "patient_lookup" : If the query is related to finding details about a specific patient by giving their name
+              Examples: "Show me John Doe", "Find patient Jane Smith", "Look up Mary Johnson"
+           
+           b) "diagnosis_search" : If the query is related to finding patients with a specific diagnosis or condition
+              Examples: "Show diabetes patients", "Find all pneumonia cases", "List heart disease patients"
+           
+           c) "mrn_lookup" : If the query provides an MRN (Medical Record Number) to look up a patient
+              Examples: "Look up MRN 12345", "Find patient with record number 67890", "Show MRN A1B2C3"
+
+        3. Use "null" if you could not detect any of the above intents
+
+        Using the intent that you just identified, I also want you to recognize the related parameters:
+        Instructions to Detect Parameters:
+        1. If intent is "patient_lookup" then the parameter will be the patient name provided
+        2. If the intent is "diagnosis_search" then the parameter will be the diagnosis name
+        3. If the intent is "mrn_lookup" then the parameter will be the MRN provided
+        4. If no intent is detected, parameter will also be "null"
+
+        Required JSON structure:
+        {{
+          "intent": "intent you detected in the provided format",
+          "parameter": "parameter you detected in the provided format"
+        }}
+
+        Query to analyze:
+        {query}
+        """
+
         self.healthcare_prompt_template = """
         You are a healthcare data extraction specialist. Extract patient information from the following medical document text and return it as a JSON object.
 
@@ -52,9 +85,53 @@ class OpenAIExtractor:
           "document_type": "string or null"
         }}
 
-        Document text to analyze:
+        Query text to analyze:
         {document_text}
         """
+
+    def extract_intent(self, query: str) -> Dict[str, Any]:
+
+        try:
+            self.logger.info("Starting INTENT & PARAMETER Extraction")
+            prompt = self.intent_detection_template.format(query=query)
+
+            response = self.client.chat.completions.create(
+                model="healthcare-extractor",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a intent & parameter extraction expert. Return only valid JSON.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1000,
+                temperature=0.1,
+            )
+
+            openai_response = response.choices[0].message.content
+
+            self.logger.info(f"Raw OpenAI response: {openai_response}")
+            self.logger.info(
+                f"✅ OpenAI response received: {len(openai_response)} characters"
+            )
+
+            try:
+                extracted_data = json.loads(openai_response)
+                self.logger.info(f"Parsed JSON keys: {list(extracted_data.keys())}")
+                self.logger.info("🎯 EXTRACTED INTENT DATA:")
+                for key, value in extracted_data.items():
+                    self.logger.info(f"  {key}: {value}")
+
+                return extracted_data
+
+            except json.JSONDecodeError as json_error:
+                self.logger.error(f"❌ JSON parsing failed: {str(json_error)}")
+                self.logger.error(f"OpenAI response was: {openai_response}")
+                raise json_error
+
+        except Exception as e:
+            self.logger.error(f"❌ Intent extraction failed for query: {query}")
+            raise e
 
     def extract_data(
         self, document_text: str, filename: str = "unknown"

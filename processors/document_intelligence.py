@@ -23,19 +23,6 @@ class DocumentIntelligenceProcessor:
         self.logger = logging.getLogger(__name__)
 
     def extract_text(self, blob_data: bytes, filename: str = "unknown") -> str:
-        """
-        Extract text from PDF blob data
-
-        Args:
-            blob_data: PDF file as bytes
-            filename: Name of the file (for logging)
-
-        Returns:
-            Extracted text as string
-
-        Raises:
-            Exception: If text extraction fails
-        """
         try:
             self.logger.info(f"🔍 Starting text extraction for: {filename}")
 
