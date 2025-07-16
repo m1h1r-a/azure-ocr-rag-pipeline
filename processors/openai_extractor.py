@@ -41,6 +41,27 @@ class OpenAIExtractor:
            
            c) "mrn_lookup" : If the query provides an MRN (Medical Record Number) to look up a patient
               Examples: "Look up MRN 12345", "Find patient with record number 67890", "Show MRN A1B2C3"
+           
+           d) "facility_search" : If the query is about finding patients or information from a specific healthcare facility
+              Examples: "Show patients from General Hospital", "Find admissions at City Medical Center", "List patients at Mayo Clinic"
+           
+           e) "physician_search" : If the query is about finding patients treated by a specific doctor or physician
+              Examples: "Show patients treated by Dr. Smith", "Find Dr. Johnson's patients", "List all patients under Dr. Brown"
+           
+           f) "date_range_search" : If the query involves finding patients based on admission dates, discharge dates, or date ranges
+              Examples: "Show admissions from January 2024", "Find patients discharged yesterday", "List admissions between Jan 1 and Jan 15"
+           
+           g) "insurance_search" : If the query is about finding patients with specific insurance companies or plans
+              Examples: "Show Aetna patients", "Find patients with Blue Cross", "List Humana insurance patients"
+           
+           h) "document_search" : If the query is about finding information about processed documents or document types
+              Examples: "Show processed documents", "Find admission forms", "List document types processed"
+           
+           i) "stats_summary" : If the query is asking for statistics, counts, or summary information
+              Examples: "How many patients total?", "Show patient statistics", "What's the count of processed documents?"
+           
+           j) "recent_activity" : If the query is about recent admissions, discharges, or recently processed information
+              Examples: "Show recent admissions", "What was processed today?", "Recent patient activity"
 
         3. Use "null" if you could not detect any of the above intents
 
@@ -49,7 +70,14 @@ class OpenAIExtractor:
         1. If intent is "patient_lookup" then the parameter will be the patient name provided
         2. If the intent is "diagnosis_search" then the parameter will be the diagnosis name
         3. If the intent is "mrn_lookup" then the parameter will be the MRN provided
-        4. If no intent is detected, parameter will also be "null"
+        4. If the intent is "facility_search" then the parameter will be the facility name
+        5. If the intent is "physician_search" then the parameter will be the physician/doctor name
+        6. If the intent is "date_range_search" then the parameter will be the date or date range mentioned
+        7. If the intent is "insurance_search" then the parameter will be the insurance company name
+        8. If the intent is "document_search" then the parameter will be the document type or "all" for general document queries
+        9. If the intent is "stats_summary" then the parameter will be what type of statistics requested or "general"
+        10. If the intent is "recent_activity" then the parameter will be the time period or "recent"
+        11. If no intent is detected, parameter will also be "null"
 
         Required JSON structure:
         {{
