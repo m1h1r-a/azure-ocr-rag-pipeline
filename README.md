@@ -1,4 +1,4 @@
-# Azure Healthcare PDF Processor
+# Centralized AI OCR Solution for Healthcare using Azure
 
 A serverless, end-to-end pipeline for extracting, structuring, and querying data from healthcare PDFs using Azure services and AI.
 

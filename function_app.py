@@ -93,7 +93,7 @@ def chat_endpoint(req: func.HttpRequest) -> func.HttpResponse:
         response_data = chat_processor.process_message(user_message)
 
         return func.HttpResponse(
-            json.dumps(response_data),
+            json.dumps(response_data, default=str),
             status_code=200,
             mimetype="application/json",
             headers={
@@ -113,5 +113,7 @@ def chat_endpoint(req: func.HttpRequest) -> func.HttpResponse:
         }
 
         return func.HttpResponse(
-            json.dumps(error_response), status_code=500, mimetype="application/json"
+            json.dumps(error_response, default=str),
+            status_code=500,
+            mimetype="application/json",
         )

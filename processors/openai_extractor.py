@@ -94,10 +94,11 @@ class OpenAIExtractor:
 
         Instructions:
         1. Extract ALL available information, even if some fields are missing, but do not make up any data.
-        2. Use "null" for missing information
-        3. Keep original formatting for names and text
-        4. For dates, use MM/DD/YYYY format when possible
-        5. Return only valid JSON, no additional text
+        2. For "patient_name", remove any periods and collapse multiple spaces into a single space (e.g. “MARY.   JANE” → “MARY JANE”).
+        3. Use "null" for missing information
+        4. Keep original formatting for names and text (aside from the cleaning rule for patient_name)
+        5. For dates, use MM/DD/YYYY format when possible
+        6. Return only valid JSON, no additional text
 
         Required JSON structure:
         {{
