@@ -14,7 +14,7 @@ class DatabaseOperations:
         self.logger = logging.getLogger(__name__)
 
     def truncate_string(self, value: Any, max_length: int) -> Optional[str]:
-        """Truncate string to fit database column size - same as original"""
+        """Truncate string to fit database column size"""
         if value is None:
             return None
         str_value = str(value)
@@ -26,7 +26,7 @@ class DatabaseOperations:
         return str_value
 
     def format_date_field(self, date_str: Any) -> Optional[str]:
-        """Convert date string to SQL Server format or return None - same as original"""
+        """Convert date string to SQL Server format or return None"""
         if not date_str or date_str == "null":
             return None
         try:
@@ -70,7 +70,7 @@ class DatabaseOperations:
             formatted_date = current_time.strftime("%Y-%m-%d")
             formatted_time = current_time.strftime("%H:%M:%S")
 
-            # 1. Insert into Documents table - same as original
+            # 1. Insert into Documents table
             self.cursor.execute(
                 """
                 INSERT INTO Documents (Filename, DocumentType, ProcessingStatus, RawText, CreatedDate)
@@ -87,19 +87,19 @@ class DatabaseOperations:
                 ),
             )
 
-            # Get the inserted DocumentID - same as original
+            # Get the inserted DocumentID
             self.cursor.execute("SELECT @@IDENTITY as DocumentID")
             document_row = self.cursor.fetchone()
             document_id = int(document_row["DocumentID"])
             self.logger.info(f"✅ Document inserted with ID: {document_id}")
 
-            # 2. Insert into Patients table (if we have patient data) - same as original
+            # 2. Insert into Patients table (if we have patient data)
             if (
                 extracted_data.get("patient_name")
                 and extracted_data.get("patient_name") != "null"
             ):
 
-                # Format dates - same as original
+                # Format dates
                 formatted_dob = self.format_date_field(extracted_data.get("dob"))
                 formatted_admission = self.format_date_field(
                     extracted_data.get("admission_date")
@@ -130,13 +130,12 @@ class DatabaseOperations:
                     ),
                 )
 
-                # Get PatientID - same as original
                 self.cursor.execute("SELECT @@IDENTITY as PatientID")
                 patient_row = self.cursor.fetchone()
                 patient_id = int(patient_row["PatientID"])
                 self.logger.info(f"✅ Patient inserted with ID: {patient_id}")
 
-                # 3. Insert into Insurance table (if we have insurance data) - same as original
+                # 3. Insert into Insurance table (if we have insurance data)
                 if (
                     extracted_data.get("insurance_company")
                     and extracted_data.get("insurance_company") != "null"
@@ -157,7 +156,7 @@ class DatabaseOperations:
                     )
                     self.logger.info("✅ Insurance data inserted")
 
-            # 4. Insert into ProcessTable or ExceptionTable - same as original
+            # 4. Insert into ProcessTable or ExceptionTable
             document_type = extracted_data.get("document_type", "Unknown")
 
             if accuracy >= 50:
@@ -200,7 +199,7 @@ class DatabaseOperations:
                 )
                 self.logger.info("✅ Record added to ExceptionTable")
 
-            # Commit all changes - same as original
+            # Commit all changes
             self.conn.commit()
             self.logger.info("🎉 DATABASE INSERTION COMPLETED SUCCESSFULLY!")
 
@@ -210,7 +209,7 @@ class DatabaseOperations:
             raise db_insert_error
 
     def close_connection(self):
-        """Close database connection - same as original"""
+        """Close database connection"""
         if self.conn:
             self.conn.close()
             self.logger.info("🔐 Database connection closed")

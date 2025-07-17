@@ -18,7 +18,7 @@ class DatabaseConnection:
         self.logger = logging.getLogger(__name__)
 
     def connect_with_retry(
-        self, max_retries: int = 5, retry_delay: int = 10
+        self, max_retries: int = 5, retry_delay: int = 5
     ) -> Tuple[Optional[object], Optional[object]]:
         """
         Connect to database with retry logic - exact same logic as original

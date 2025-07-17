@@ -118,6 +118,52 @@ class OpenAIExtractor:
         {document_text}
         """
 
+        self.response_prompt_template = """
+        You are an expert healthcare-document chatbot assistant.  
+        Read the user’s query and the JSON-formatted query results, then write a short (2–3 sentences), conversational reply that includes only the most important details. Make sure it makes sense when you read it based on the diagnosis etc.
+
+        - **Tone**: Friendly and approachable, but still professional.
+        - **Length**: A single paragraph—no bullet points.
+        - **Content**: Weave field names into natural text (e.g., “Patient John Doe (MRN 12345) was admitted on 05/10/2025 for pneumonia.”).
+        - **Nulls**: Skip any fields whose value is `null`.
+        - **Closing**: End with a simple offer to help again, like “Let me know if you need anything else.”
+        - Return only valid natural language response(reply to the query), no additional text
+
+        User Query:
+        {query}
+
+        Query Results (JSON):
+        {query_results}
+        """
+
+    def format_response(self, query, query_results) -> str:
+        try:
+            self.logger.info("Starting Response Formatting")
+            prompt = self.response_prompt_template.format(
+                query=query, query_results=query_results
+            )
+
+            response = self.client.chat.completions.create(
+                model="healthcare-extractor",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a chatbot given query and query_results, give appropriate natural language response",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1000,
+                temperature=0.1,
+            )
+
+            openai_response = response.choices[0].message.content
+            self.logger.info(f"✅ OpenAI response received: {openai_response}")
+            return openai_response
+
+        except Exception as e:
+            self.logger.info(f"Unable to Format Response in OpenAI: {e}")
+            return "Error Formatting Response in OpenAIExtractor"
+
     def extract_intent(self, query: str) -> Dict[str, Any]:
 
         try:
