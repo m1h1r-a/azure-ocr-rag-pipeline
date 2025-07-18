@@ -28,62 +28,57 @@ class OpenAIExtractor:
         self.logger = logging.getLogger(__name__)
 
         self.intent_detection_template = """
-        You are a query intent detection specialist. Extract the intent from the following query and return it as a JSON object.
+        You are a query intent detection specialist. Extract ALL applicable intents from the query and return as JSON array.
 
-        Instructions To Detect Intent:
-        1. Extract the most likely intent
-        2. Intent will be of the following categories, return only the category name:
-           a) "patient_lookup" : If the query is related to finding details about a specific patient by giving their name
-              Examples: "Show me John Doe", "Find patient Jane Smith", "Look up Mary Johnson"
-           
-           b) "diagnosis_search" : If the query is related to finding patients with a specific diagnosis or condition
-              Examples: "Show diabetes patients", "Find all pneumonia cases", "List heart disease patients"
-           
-           c) "mrn_lookup" : If the query provides an MRN (Medical Record Number) to look up a patient
-              Examples: "Look up MRN 12345", "Find patient with record number 67890", "Show MRN A1B2C3"
-           
-           d) "facility_search" : If the query is about finding patients or information from a specific healthcare facility
-              Examples: "Show patients from General Hospital", "Find admissions at City Medical Center", "List patients at Mayo Clinic"
-           
-           e) "physician_search" : If the query is about finding patients treated by a specific doctor or physician
-              Examples: "Show patients treated by Dr. Smith", "Find Dr. Johnson's patients", "List all patients under Dr. Brown"
-           
-           f) "date_range_search" : If the query involves finding patients based on admission dates, discharge dates, or date ranges
-              Examples: "Show admissions from January 2024", "Find patients discharged yesterday", "List admissions between Jan 1 and Jan 15"
-           
-           g) "insurance_search" : If the query is about finding patients with specific insurance companies or plans
-              Examples: "Show Aetna patients", "Find patients with Blue Cross", "List Humana insurance patients"
-           
-           h) "document_search" : If the query is about finding information about processed documents or document types
-              Examples: "Show processed documents", "Find admission forms", "List document types processed"
-           
-           i) "stats_summary" : If the query is asking for statistics, counts, or summary information
-              Examples: "How many patients total?", "Show patient statistics", "What's the count of processed documents?"
-           
-           j) "recent_activity" : If the query is about recent admissions, discharges, or recently processed information
-              Examples: "Show recent admissions", "What was processed today?", "Recent patient activity"
+        Instructions:
+        1. Extract ALL intents that apply (can be one or many)
+        2. Return array of key-value pairs: intent category → parameter
+        3. Order by relevance (most important first)
+        4. Read the entire query and determine what the subject is reffering to based on the context
+            example query: "Who is John Doe's physician name?" 
+            Here, John Doe is clearly the patient and we are looking up the physician
 
-        3. Use "null" if you could not detect any of the above intents
+        Intent Categories:
+        a) "patient_lookup" - Finding patient by name ("Show John Doe")
+        b) "diagnosis_search" - Finding patients by diagnosis ("diabetes patients")
+        c) "mrn_lookup" - Finding by MRN ("MRN 12345")
+        d) "facility_search" - Finding by facility ("patients at Mayo Clinic")
+        e) "physician_search" - Finding by doctor ("Dr. Smith's patients")
+        f) "date_range_search" - Finding by dates ("admitted last month")
+        g) "insurance_search" - Finding by insurance ("Aetna patients")
+        h) "document_search" - Finding documents ("processed documents")
+        i) "stats_summary" - Statistics/counts ("How many patients?")
+        j) "recent_activity" - Recent info ("recent admissions")
 
-        Using the intent that you just identified, I also want you to recognize the related parameters:
-        Instructions to Detect Parameters:
-        1. If intent is "patient_lookup" then the parameter will be the patient name provided
-        2. If the intent is "diagnosis_search" then the parameter will be the diagnosis name
-        3. If the intent is "mrn_lookup" then the parameter will be the MRN provided
-        4. If the intent is "facility_search" then the parameter will be the facility name
-        5. If the intent is "physician_search" then the parameter will be the physician/doctor name
-        6. If the intent is "date_range_search" then the parameter will be the date or date range mentioned
-        7. If the intent is "insurance_search" then the parameter will be the insurance company name
-        8. If the intent is "document_search" then the parameter will be the document type or "all" for general document queries
-        9. If the intent is "stats_summary" then the parameter will be what type of statistics requested or "general"
-        10. If the intent is "recent_activity" then the parameter will be the time period or "recent"
-        11. If no intent is detected, parameter will also be "null"
+        Parameters:
+        - patient_lookup → patient name
+        - diagnosis_search → diagnosis name
+        - mrn_lookup → MRN number
+        - facility_search → facility name
+        - physician_search → doctor name
+        - date_range_search → date/range
+        - insurance_search → insurance name
+        - document_search → doc type or "all"
+        - stats_summary → stat type or "general"
+        - recent_activity → time period or "recent"
 
-        Required JSON structure:
-        {{
-          "intent": "intent you detected in the provided format",
-          "parameter": "parameter you detected in the provided format"
-        }}
+        Required format:
+        [{{"intent_name": "parameter_value"}}]
+
+        Examples:
+        "Show Dr. Smith's diabetes patients"
+        [{{"physician_search": "Dr. Smith"}}, {{"diagnosis_search": "diabetes"}}]
+
+        "What are newborn baby names born in General Hospital?"
+        [{{"facility_search": "General Hospital"}}, {{"diagnosis_search": "newborn"}}]
+
+        "How many patients admitted last month at General Hospital?"
+        [{{"stats_summary": "patient count"}}, {{"date_range_search": "last month"}}, {{"facility_search": "General Hospital"}}]
+
+        "Find John Doe's insurance and diagnosis"
+        [{{"patient_lookup": "John Doe"}}, {{"insurance_search": "all"}}, {{"diagnosis_search": "all"}}]
+
+        Return empty array [] if no intents detected.
 
         Query to analyze:
         {query}
@@ -119,21 +114,43 @@ class OpenAIExtractor:
         """
 
         self.response_prompt_template = """
-        You are an expert healthcare-document chatbot assistant.  
-        Read the user’s query and the JSON-formatted query results, then write a short (2–3 sentences), conversational reply that includes only the most important details. Make sure it makes sense when you read it based on the diagnosis etc.
+        You are a healthcare data assistant. Your job is to directly answer the user's specific question using the provided query results.
 
-        - **Tone**: Friendly and approachable, but still professional.
-        - **Length**: A single paragraph—no bullet points.
-        - **Content**: Weave field names into natural text (e.g., “Patient John Doe (MRN 12345) was admitted on 05/10/2025 for pneumonia.”).
-        - **Nulls**: Skip any fields whose value is `null`.
-        - **Closing**: End with a simple offer to help again, like “Let me know if you need anything else.”
-        - Return only valid natural language response(reply to the query), no additional text
+        CRITICAL INSTRUCTIONS:
+        1. **Answer the question directly FIRST** - Start with the exact information the user asked for
+        2. **Be specific to the query type** - Focus on what they actually want to know
+        3. **Use the most relevant data** - Prioritize results that directly answer their question
+        4. **Provide context secondarily** - Add related helpful information after the main answer
+        5. **Handle multiple results intelligently** - If multiple patients found, clarify which one or list them
 
-        User Query:
-        {query}
+        RESPONSE STRUCTURE:
+        - **Direct Answer**: Start with the specific information requested
+        - **Context**: Add relevant supporting details (patient info, dates, etc.)
+        - **Closing**: Simple offer to help with more information
 
-        Query Results (JSON):
-        {query_results}
+        QUERY TYPE EXAMPLES:
+        - Insurance questions → Lead with insurance company name
+        - Diagnosis questions → Lead with diagnosis information  
+        - Patient lookup → Lead with patient identification details
+        - Doctor questions → Lead with physician information
+        - Date questions → Lead with relevant dates
+
+        FORMATTING RULES:
+        - **Tone**: Professional but conversational
+        - **Length**: 2-3 sentences maximum
+        - **Format**: Single paragraph, no bullet points
+        - **Names**: Use proper names and titles (Dr., Patient, etc.)
+        - **Null handling**: Skip any null/empty fields entirely
+        - **Multiple results**: Be clear about which patient/result you're referencing
+
+        If multiple patients match, either:
+        - Focus on the most relevant one if context makes it clear
+        - Briefly mention all matches if ambiguous
+
+        User Query: {query}
+        Query Results: {query_results}
+
+        Provide a direct, helpful response that answers their specific question:
         """
 
     def format_response(self, query, query_results) -> str:
@@ -164,12 +181,10 @@ class OpenAIExtractor:
             self.logger.info(f"Unable to Format Response in OpenAI: {e}")
             return "Error Formatting Response in OpenAIExtractor"
 
-    def extract_intent(self, query: str) -> Dict[str, Any]:
-
+    def extract_intent(self, query: str) -> list[Dict[str, Any]]:
         try:
             self.logger.info("Starting INTENT & PARAMETER Extraction")
             prompt = self.intent_detection_template.format(query=query)
-
             response = self.client.chat.completions.create(
                 model="healthcare-extractor",
                 messages=[
@@ -180,24 +195,21 @@ class OpenAIExtractor:
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=1000,
-                temperature=0.1,
+                temperature=0.3,
             )
-
             openai_response = response.choices[0].message.content
-
             self.logger.info(f"Raw OpenAI response: {openai_response}")
-            self.logger.info(
-                f"✅ OpenAI response received: {len(openai_response)} characters"
-            )
 
             try:
-                extracted_data = json.loads(openai_response)
-                self.logger.info(f"Parsed JSON keys: {list(extracted_data.keys())}")
-                self.logger.info("🎯 EXTRACTED INTENT DATA:")
-                for key, value in extracted_data.items():
-                    self.logger.info(f"  {key}: {value}")
+                extracted_intents = json.loads(openai_response)
+                self.logger.info(f"🎯 Extracted {len(extracted_intents)} intents")
 
-                return extracted_data
+                # Log each intent
+                for intent_dict in extracted_intents:
+                    for intent, parameter in intent_dict.items():
+                        self.logger.info(f"  {intent}: {parameter}")
+
+                return extracted_intents
 
             except json.JSONDecodeError as json_error:
                 self.logger.error(f"❌ JSON parsing failed: {str(json_error)}")

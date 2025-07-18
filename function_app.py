@@ -90,8 +90,8 @@ def chat_endpoint(req: func.HttpRequest) -> func.HttpResponse:
         user_message = req_body["message"]
 
         chat_processor = ChatProcessor()
-        response_data = chat_processor.process_message(user_message)
 
+        response_data = chat_processor.process_message(user_message)
         return func.HttpResponse(
             json.dumps(response_data, default=str),
             status_code=200,

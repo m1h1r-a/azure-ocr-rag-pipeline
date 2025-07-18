@@ -5,13 +5,13 @@ import requests
 import streamlit as st
 from azure.storage.blob import BlobServiceClient
 
-# Configuration
-API_BASE_URL = "https://pdf-processor-functions-v2.azurewebsites.net/api"
-API_KEY = os.environ.get("API_KEY")
-STORAGE_CONNECTION_STRING = os.environ.get("STORAGE_CONNECTION_STRING")
-CONTAINER_NAME = "pdfs"
+API_BASE_URL = os.getenv(
+    "API_BASE_URL", "https://pdf-processor-functions-v2.azurewebsites.net/api"
+)
+API_KEY = os.getenv("API_KEY")
+STORAGE_CONNECTION_STRING = os.getenv("STORAGE_CONNECTION_STRING")
+CONTAINER_NAME = os.getenv("CONTAINER_NAME", "pdfs")
 
-# Page config (ONLY ONCE, at the very top)
 st.set_page_config(page_title="Healthcare AI", page_icon="🏥")
 st.title("Centralized AI OCR Solution")
 
@@ -52,7 +52,6 @@ def upload_pdf_to_blob(uploaded_file):
         return False, f"Upload failed: {str(e)}"
 
 
-# SIDEBAR - PDF Upload
 with st.sidebar:
     st.header("📄 Upload PDF")
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
@@ -67,21 +66,16 @@ with st.sidebar:
                 else:
                     st.error(f"❌ {message}")
 
-# MAIN CHAT INTERFACE
-# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat input
 prompt = st.chat_input("What's your Question?")
 
 if prompt:
-    # Add user message
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Get and display assistant response
     answer = query_backend(prompt)
     st.chat_message("assistant").markdown(answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})

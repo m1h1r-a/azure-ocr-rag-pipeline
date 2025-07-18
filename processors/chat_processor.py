@@ -16,57 +16,68 @@ class ChatProcessor:
         self.logger.info(f"💬 User message: {user_message}")
         self.openai_extractor = OpenAIExtractor()
         self.retreive_data = RetreiveData()
-        self.intent = ""
-        self.parameter = ""
+        intent_list = self._identify_intent(user_message)
 
-        intent = self._identify_intent(user_message)
+        all_results = []
+        total_count = 0
+        all_data = []
 
-        if self.intent == "patient_lookup":
-            query_results = self.retreive_data._get_patient_by_name(self.parameter)
-        elif self.intent == "mrn_lookup":
-            query_results = self.retreive_data._get_patient_by_mrn(self.parameter)
-        elif self.intent == "diagnosis_search":
-            query_results = self.retreive_data._get_patients_by_diagnosis(
-                self.parameter
-            )
-        elif self.intent == "physician_search":
-            query_results = self.retreive_data._get_patients_by_physician(
-                self.parameter
-            )
-        elif self.intent == "insurance_search":
-            query_results = self.retreive_data._get_patients_by_insurance(
-                self.parameter
-            )
-        elif self.intent == "document_search":
-            query_results = self.retreive_data._get_documents_search(self.parameter)
-        elif self.intent == "stats_summary":
-            query_results = self.retreive_data._get_stats_summary(self.parameter)
-        else:
-            query_results = {
-                "status": "unsupported",
-                "message": f"Intent '{self.intent}' not recognized or supported yet",
-            }
+        for intent_pair in intent_list:
+            self.intent = list(intent_pair.keys())[0]
+            self.parameter = intent_pair[self.intent]
 
-        response = self._generate_response(user_message, query_results)
+            if self.intent == "patient_lookup":
+                query_results = self.retreive_data._get_patient_by_name(self.parameter)
+            elif self.intent == "mrn_lookup":
+                query_results = self.retreive_data._get_patient_by_mrn(self.parameter)
+            elif self.intent == "diagnosis_search":
+                query_results = self.retreive_data._get_patients_by_diagnosis(
+                    self.parameter
+                )
+            elif self.intent == "physician_search":
+                query_results = self.retreive_data._get_patients_by_physician(
+                    self.parameter
+                )
+            elif self.intent == "insurance_search":
+                query_results = self.retreive_data._get_patients_by_insurance(
+                    self.parameter
+                )
+            elif self.intent == "document_search":
+                query_results = self.retreive_data._get_documents_search(self.parameter)
+            elif self.intent == "stats_summary":
+                query_results = self.retreive_data._get_stats_summary(self.parameter)
+            else:
+                query_results = {
+                    "status": "unsupported",
+                    "message": f"Intent '{self.intent}' not recognized or supported yet",
+                }
+
+            all_results.append(query_results)
+            if query_results.get("count"):
+                total_count += query_results["count"]
+            if query_results.get("data"):
+                all_data.extend(query_results["data"])
+
+        combined_query_results = {
+            "status": "success",
+            "data": all_data,
+            "count": total_count,
+            "all_results": all_results,
+        }
+
+        response = self._generate_response(user_message, combined_query_results)
 
         return {
             "status": "success",
             "user_message": user_message,
-            "intent": self.intent,
-            "parameter": self.parameter,
             "formatted_response": response,
-            "data": query_results.get("data", []),
-            "count": query_results.get("count", 0),
+            "data": all_data,
+            "count": total_count,
         }
 
     def _identify_intent(self, message: str):
-
         extracted_data = self.openai_extractor.extract_intent(message)
-        self.intent = extracted_data["intent"]
-        self.parameter = extracted_data["parameter"]
-
-        self.logger.info(f"Intent: {self.intent}")
-        self.logger.info(f"Parameter: {self.parameter}")
+        self.logger.info(extracted_data)
         return extracted_data
 
     def _generate_response(self, query, query_results: dict) -> str:
@@ -77,14 +88,13 @@ class ChatProcessor:
             if query_results["status"] == "unsupported":
                 return query_results["message"]
 
-            # Intents that need OpenAI formatting (complex, narrative responses)
             openai_intents = [
                 "patient_lookup",
                 "diagnosis_search",
                 "physician_search",
             ]
 
-            if self.intent in openai_intents:
+            if len(query_results["all_results"]) > 1 or self.intent in openai_intents:
                 response = self.openai_extractor.format_response(query, query_results)
                 return response
             else:
@@ -98,7 +108,6 @@ class ChatProcessor:
         """Template-based formatting for simple responses"""
 
         if query_results["count"] == 0:
-            # TODO: Make AI generate the query?
             return "No results found for your query."
 
         if self.intent == "mrn_lookup":

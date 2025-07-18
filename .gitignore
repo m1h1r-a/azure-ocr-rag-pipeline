@@ -1,1 +1,42 @@
-config.py
+# Python
+.streamlit/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.nox/
+.eggs/
+*.egg-info/
+dist/
+build/
+*.so
+# Azure Functions
+.funcignore
+local.settings.json
+.vscode/
+!.vscode/extensions.json
+# Environment
+.env
+# Backups
+backups/
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+bin/
+digest/
+etc/
+lib/
+share/
