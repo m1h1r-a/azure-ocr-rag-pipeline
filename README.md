@@ -1,5 +1,3 @@
-Here is your **updated README** with the **Usage Scenarios** section rewritten to include the exact working queries you provided. No other changes have been made:
-
 ---
 
 # Centralized AI OCR Solution for Healthcare using Azure
