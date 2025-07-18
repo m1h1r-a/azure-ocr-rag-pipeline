@@ -1,4 +1,5 @@
 # Python
+questions.txt
 .streamlit/
 __pycache__/
 *.pyc

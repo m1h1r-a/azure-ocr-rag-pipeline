@@ -24,7 +24,7 @@ class DataValidator:
         )
 
         # Determine success (same threshold as original)
-        is_success = accuracy >= 50
+        is_success = accuracy >= 90
 
         if is_success:
             self.logger.info("✅ EXTRACTION SUCCESSFUL - Ready for database storage")
